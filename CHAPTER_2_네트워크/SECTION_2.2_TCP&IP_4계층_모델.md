@@ -27,7 +27,9 @@ TCP/IP 4계층            OSI 7계층
 ### 2. 전송 계층웹
     송신자와 수신자를 연결하는 통신 서비스를 제공하고 데이터 스트림 지원, 신뢰성, 흐름 제어를 제공하며, 어플리케이션과 인터넷 계층 사이 데이터 전달의 중계 역할을 하며 TCP/UDP가 있습니다.
         - TCP : 패킷 사이의 순서를 보장하고 연결지향 프로토콜을 사용해, 신뢰성을 구축하여 수신 여부를 확인하고 가상회선 패킷 교환 방식을 사용합니다.
-            가상회선 패킷 교환 방식 : 각 패킷에는 가상회선 식별자가 포함되어 패킷을 전송하면 가상회선은 해제가 되고, 전송된 순서대로 도착하는 방식입니다.
+            가상회선 패킷 교환 방식 : 각 패킷에는 가상회선 식별자(가상회선 식별 번호 VCI)가 포함되어 패킷을 전송하면 가상회선은 해제가 되고, 전송된 순서대로 도착하는 방식입니다.
+            가상회선(VC) : 패킷 스위칭을 기반으로 데이터 네트워크를 통해 데이터를 전송하는 수단.
+            패킷 스위칭 : 데이터를 네트워크를 통해 전송되는 패킷으로 그룹화하는 방법.
         - UDP : 순서를 보장하지 않고 수신여부를 확인하지 않으며 데이터만 주는 데이터그램 패킷 교환 방식을 사용합니다. 
             데이터그램 패킷 교환 방식 : 패킷이 독립적으로 이동하며 최적의 경로를 선택하여 분할된 패킷은 다른 경로로 전송될 수 있으며 도착한 순서가 다를 수 있습니다.
         - [TCP 연결 성립 과정](#####TCP-연결-성립-과정)
@@ -56,14 +58,15 @@ TCP는 신뢰성을 확보할 때, 3-way-handshake라는 작업을 진행합니�
 이렇게 3-way-handshake 과정 이후, 신뢰성이 구축되고 데이터 전송을 시작합니다.
 UDP는 이 과정이 없기 때문에 신뢰성이 없는 계층이라고 합니다.
 
-##### TCP 연결 헤제 과정
+##### TCP 연결 해제 과정
 TCP가 연결 해제할 때는 4-way-handshake 과정이 발생합니다.
 1. 클라이언트가 연결을 닫으려 할 때 FIN으로 설정된 세그먼트를 보냅니다.
     그리고 클라이언트는 FIN_WAIT_1 상태로 서버의 응답을 기다립니다.
 2. 서버는 클라이언트로 ACK라는 승인 세그먼트를 보냅니다.
     그리고 CLOSE_WAIT 상태로 들어가고 클라이언트가 세그먼트를 받으면 FIN_WAIT_2 상태에 들어갑니다.
-3. 서버는 ACK를 보내고 일정 시간 이후에 클라이언트에 FIN 세그먼트를 보냅니다.
-4. 클라이언트는 TIME_WAIT 상태가 되고 다시 서버로 ACK를 보내 서버는 CLOSED상태가 됩니다.
+3. 일정 시간 이후에 클라이언트에 FIN 세그먼트를 보냅니다.
+   그리고 서버는 LAST_ACK 상태가 됩니다.
+5. 클라이언트는 TIME_WAIT 상태가 되고 다시 서버로 ACK를 보내 서버는 CLOSED상태가 됩니다.
     이후 클라이언트는 어느 정도 대기한 후 연결이 닫히고 클라이언트와 서버의 모든 자원의 연결이 해제 됩니다.
     - 어느정도 대기 후 닫히는 이유 :
         1) 지연 패킷이 발생할 경우를 대비
@@ -158,3 +161,27 @@ CRC : 에러 확인 비트
 링크 : 프레임(데이터 링크 계층), 비트(물리 계층)
 PDU 중 아래 계층인 비트로 송수신하는 것이 모든 PDU 중 가장 빠르고 효율성이 높습니다.
 어플리케이션 계층에서는 문자열을 기반으로 송수신을 하는데, 헤더에 authorization 값 등 다른 값들을 넣는 확장이 쉽기 때문입니다.
+
+================================================================================================================================================================
+
+Application Layer에서 request를 캡슐화하여 Transport Layer에 보낸다.
+Transport Layer에서는 message는 segment로 되며 TCP(L4) header가 붙으면서 TCP 패킷 사이의 순서 보장과 연결지향 프로토콜을 사용하여 TCP 연결을 통해 신뢰성을 구축하거나
+  message는 datagram로 되어 Internet Layer에 보낸다.
+Internet Layer에서 IP(L3) header가 붙여지게 되며 segment또는 datagram은 packet으로 되고 해당 ip주소를 지정하여 Network Layer로 데이터를 전달한다.
+Network Layer에서 packet은 frame또는 bit로 되어 서버와 통신을 한다.
+Transport Layer에서 신뢰성을 구축하기 위해 TCP 연결 과정은 3 way handshake를 통해 이루어지는데,
+  1. client는 Initial Sequence Number를 Synchronization에 담아 server에 보낸다.
+  2. server는 Synchronization을 수신하고 server의 Initial Sequence Number를 보내며 승인번호로 client의 Initial Sequece Number +1을 보낸다.
+  3. client는 server의 Initial Sequence Number +1 값의 승인 번호를 담아 Acknowledgement를 server에 보낸다.
+
+Network Layer에서 프레임화된 데이터를 Internet Layer에 전달하여 패킷화를 하고 Transport Layer로 보내어 다시 세그먼트화 또는 데이터그램화가 진행된다.
+다시 Application Layer에서 세그먼트 또는 데이터그램을 메시지화가 된다.
+
+Transport Layer에서 TCP 통신을 해제할 때 4 way handshake를 진행한다.
+  1. client는 FIN으로 설정된 segment를 보내고 FIN_WAIT_1 상태가 되며 server의 응답을 기다린다.
+  2. server는 client로 부터 Acknowledgement라는 승인 segment를 보내고 CLOSE_WAIT 상태가 되며
+     client는 segment를 받으면 FIN_WAIT_2 상태가 된다.
+  3. server는 다시 일정시간 후에 FIN segment를 보내고 LAST_ACK 상태가 된다.
+  4. client는 TIME_WAIT 상태가 되고 server로 Acknowledge를 보내고
+     server는 CLOSED 상태가 된다.
+     client는 어느정도 대기 후에 연결이 닫히고 server는 모든 자원이 연결해제 된다.
