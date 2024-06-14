@@ -1,4 +1,8 @@
-# 💡데이터 베이스 기초
+💡데이터 베이스 기초
+
+subquery로 하나의 query로 만드는 것보다 query 두 개를 쓰는 성능
+사용하는 DBMS에서 execution plan을 통해 성능 차이를 확인/비교
+
 데이터 베이스 개론
 database(DB) : 전자적으로(electronically) 저장되고 사용되는 관련있는(related) 데이터들의 조직화된 집합(organized collection)
 관련있는 데이터들 - 같은 서비스에서 사용되는 데이터
@@ -94,98 +98,98 @@ set (relation 이 수학에서의 의미를 알기 위한 배경지식)
 하나의 set 에서 elements 의 순서는 중요하지 않다.
 e.g.) 1,3,11,4,7
 
-relational data model
-    주요 개념 			|	설명
-    domain			|	set of atomic values ( 더이상 나누어질 수 없는 값들의 집합 )
-    domain name 	| 	domain 이름
-    attribute 		|	domain 이 relation 에서 맡은 역할 이름
-    tuple 			|	각 attribute 의 값으로 이루어진 리스트. 일부 값은 NULL 일 수 있다.
-    relation 		|	set of tuples ( 튜플들의 집합 )
-    relation name 	|	relation 의 이름
+	relational data model
+		주요 개념 			|	설명
+		domain			|	set of atomic values ( 더이상 나누어질 수 없는 값들의 집합 )
+		domain name 	| 	domain 이름
+		attribute 		|	domain 이 relation 에서 맡은 역할 이름
+		tuple 			|	각 attribute 의 값으로 이루어진 리스트. 일부 값은 NULL 일 수 있다.
+		relation 		|	set of tuples ( 튜플들의 집합 )
+		relation name 	|	relation 의 이름
 
-relation schema, .. etc
-    relation 의 구조를 나타낸다
-    relation 이름과 attribute 리스트로 표기된다
-    e.g.) STUDENT(id, name, grade, major, phone_num, emer_phone_num)
-        relation 이름을 적어주고 괄호 안에 attribute 를 적어준다
-    attributes 와 관련된 constraints 도 포함한다
-        constraints
-    degree of a relation
-        relation schema 에서 attributes 의 수
-        e.g.) STUDENT(id, name, grade, major, phone_num, emer_phone_num) -> degree 6
-    relation(or relation state)
-        set of tuples (튜플들의 집합)
-        데이터에 한정해서 relation 이라 칭한다
-relational database(관계형 디비)
-    relational data model 에 기반하여 구조화된 database
-    relational database 는 여러 개의 relations 로 구성된다
-    relation database schema
-        relation schema set + integrity constraints set
-        릴레이션 스키마 집합 + integrity 관련된 contraints set 으로 구성
-relation의 특징들
-    relation 은 중복된 tuple 을 가질 수 없다 (relation is set of tuples)
-        서로 다른 튜플인데 튜플의 모든 값들이 동일한 튜플은 존재할 수 없다.
-    relation 의 tuple 을 식별하기 위해 attribute 의 부분 집합을 key 로 설정한다.
-        id 를 통해 유니크하게 식별자로 사용
-    relation 에서 tuple 의 순서는 중요하지 않다
-        순서가 바뀌어도 릴레이션의 의미는 달라지지 않는다
-    하나의 relation 에서 attribute 의 이름은 중복되면 안된다
-    하나의 tuple 에서 attribute 의 순서는 중요하지 않다.
-    attribute 는 atomic 해야 한다 (composite or multivalued attribute 허용 안됨) (atomic : 원자적인, 더 이상 나누어 질 수 없는)
-        주소 컬럼에 서울시 강남구 청담동 attribute는 서울시 / 강남구 / 청담동 이렇게 나누어 질 수 있기에 composite 이며
-        전공 컬럼에 컴공, 디자인 attribute는 복수 전공이니 나누어 주어야 하기에 multivalued 이다
-NULL의 의미
-    값이 존재하지 않는다
-    값이 존재하나 아직 그 값이 무엇인지 알지 못한다
-    해당 사항과 관련이 없다
-        토익 점수가 업데이트 안됬거나 시험을 안봤거나
-        최대한 사용하지 않는 것이 좋다
-key 설명 (기본키, 외래키 등등)
-    superkey
-        relation 에서 tuples 를 unique 하게 식별할 수 있는 attributes set
-        e.g. PLAERY(id, name, team_id, back_number, birth_date) 의 superkey는
-            {id, name, team_id, back_number, birth_date}, {id, name}, {name, team_id, back_number}, ... etc
-    candidate key
-        어느 한 attribute 라도 제거하면 unique 하게 tuples 를 식별할 수 없는 super key
-        key or minimal superkey
-        e.g. PLAERY(id, name, team_id, back_number, birth_date) 의 candidate key 는
-            {id}, {team_id, back_number}	- id 더이상 attribute 를 나눌 수 없고, team_id, back_number 를 나누어 독립적으로 식별할 수 없다
-    primary key
-        relation 에서 tuple 를 unique 하게 식별하기 위해 선택된 candidate key
-        e.g. PLAERY(id, name, team_id, back_number, birth_date) 의 primary key 는
-            {id} or {team_id, back_number}	- 보통 attribute 적은 쪽으로 primary key 가 선택된다
-    unique key
-        primary key 가 아닌 candidate keys
-        alternate key
-        e.g. PLAERY(id, name, team_id, back_number, birth_date) 의 unique key 는
-            {team_id, back_number}
-    foreign key
-        다른 relation 의 PK 를 참조하는 attributes set
-        e.g. PLAERY(id, name, team_id, back_number, birth_date) 와 TEAM(id, name, manager) 가 있을 때,
-            foreign key 는 PLAYER 의 {team_id}
-constraints 설명
-    relational database 의 relations 들이 언제나 항상 지켜줘야 하는 제약 사항
-    제약사항
-        implicit constraints
-            relational data model 자체가 가지는 constraints
-            relation 은 중복되는 tuple 을 가질 수 없다
-            relation 내에서는 같은 이름의 attribute 를 가질 수 없다
-        schema-based constraints
-            주로 DDL 을 통해 schema 에 직접 명시할 수 있는 constraints
-            explicit constraints
-            종류
-            domain constraints
-                attribute 의 value 는 해당 attribute 의 domain 에 속한 value 여야 한다
-                    학년에 1,2,3 은 이해되도 100 학년은 말이 안된다
-            key constraints
-                서로 다른 tuples 는 같은 value 의 key 를 가질 수 없다.
-                    같은 primary key 값을 가질 수 없다
-            NULL value constraints
-                attribute 가 NOT NULL 로 명시됐다면 NULL 을 값으로 가질 수 없다
-            entity integrity constraint
-                primary key 는 value 에 NULL 을 가질 수 없다
-            referential integrity constraint
-                FK 와 PK 와 도메인이 같아야 하고 PK 에 없는 values 를 FK 가 값으로 가질 수 없다
+	relation schema, .. etc
+		relation 의 구조를 나타낸다
+		relation 이름과 attribute 리스트로 표기된다
+		e.g.) STUDENT(id, name, grade, major, phone_num, emer_phone_num)
+			relation 이름을 적어주고 괄호 안에 attribute 를 적어준다
+		attributes 와 관련된 constraints 도 포함한다
+			constraints
+		degree of a relation
+			relation schema 에서 attributes 의 수
+			e.g.) STUDENT(id, name, grade, major, phone_num, emer_phone_num) -> degree 6
+		relation(or relation state)
+			set of tuples (튜플들의 집합)
+			데이터에 한정해서 relation 이라 칭한다
+	relational database(관계형 디비)
+		relational data model 에 기반하여 구조화된 database
+		relational database 는 여러 개의 relations 로 구성된다
+		relation database schema
+			relation schema set + integrity constraints set
+			릴레이션 스키마 집합 + integrity 관련된 contraints set 으로 구성
+	relation의 특징들
+		relation 은 중복된 tuple 을 가질 수 없다 (relation is set of tuples)
+			서로 다른 튜플인데 튜플의 모든 값들이 동일한 튜플은 존재할 수 없다.
+		relation 의 tuple 을 식별하기 위해 attribute 의 부분 집합을 key 로 설정한다.
+			id 를 통해 유니크하게 식별자로 사용
+		relation 에서 tuple 의 순서는 중요하지 않다
+			순서가 바뀌어도 릴레이션의 의미는 달라지지 않는다
+		하나의 relation 에서 attribute 의 이름은 중복되면 안된다
+		하나의 tuple 에서 attribute 의 순서는 중요하지 않다.
+		attribute 는 atomic 해야 한다 (composite or multivalued attribute 허용 안됨) (atomic : 원자적인, 더 이상 나누어 질 수 없는)
+			주소 컬럼에 서울시 강남구 청담동 attribute는 서울시 / 강남구 / 청담동 이렇게 나누어 질 수 있기에 composite 이며
+			전공 컬럼에 컴공, 디자인 attribute는 복수 전공이니 나누어 주어야 하기에 multivalued 이다
+	NULL의 의미
+		값이 존재하지 않는다
+		값이 존재하나 아직 그 값이 무엇인지 알지 못한다
+		해당 사항과 관련이 없다
+			토익 점수가 업데이트 안됬거나 시험을 안봤거나
+			최대한 사용하지 않는 것이 좋다
+	key 설명 (기본키, 외래키 등등)
+		superkey
+			relation 에서 tuples 를 unique 하게 식별할 수 있는 attributes set
+			e.g. PLAERY(id, name, team_id, back_number, birth_date) 의 superkey는
+				{id, name, team_id, back_number, birth_date}, {id, name}, {name, team_id, back_number}, ... etc
+		candidate key
+			어느 한 attribute 라도 제거하면 unique 하게 tuples 를 식별할 수 없는 super key
+			key or minimal superkey
+			e.g. PLAERY(id, name, team_id, back_number, birth_date) 의 candidate key 는
+				{id}, {team_id, back_number}	- id 더이상 attribute 를 나눌 수 없고, team_id, back_number 를 나누어 독립적으로 식별할 수 없다
+		primary key
+			relation 에서 tuple 를 unique 하게 식별하기 위해 선택된 candidate key
+			e.g. PLAERY(id, name, team_id, back_number, birth_date) 의 primary key 는
+				{id} or {team_id, back_number}	- 보통 attribute 적은 쪽으로 primary key 가 선택된다
+		unique key
+			primary key 가 아닌 candidate keys
+			alternate key
+			e.g. PLAERY(id, name, team_id, back_number, birth_date) 의 unique key 는
+				{team_id, back_number}
+		foreign key
+			다른 relation 의 PK 를 참조하는 attributes set
+			e.g. PLAERY(id, name, team_id, back_number, birth_date) 와 TEAM(id, name, manager) 가 있을 때,
+				foreign key 는 PLAYER 의 {team_id}
+	constraints 설명
+		relational database 의 relations 들이 언제나 항상 지켜줘야 하는 제약 사항
+		제약사항
+			implicit constraints
+				relational data model 자체가 가지는 constraints
+				relation 은 중복되는 tuple 을 가질 수 없다
+				relation 내에서는 같은 이름의 attribute 를 가질 수 없다
+			schema-based constraints
+				주로 DDL 을 통해 schema 에 직접 명시할 수 있는 constraints
+				explicit constraints
+				종류
+				domain constraints
+					attribute 의 value 는 해당 attribute 의 domain 에 속한 value 여야 한다
+						학년에 1,2,3 은 이해되도 100 학년은 말이 안된다
+				key constraints
+					서로 다른 tuples 는 같은 value 의 key 를 가질 수 없다.
+						같은 primary key 값을 가질 수 없다
+				NULL value constraints
+					attribute 가 NOT NULL 로 명시됐다면 NULL 을 값으로 가질 수 없다
+				entity integrity constraint
+					primary key 는 value 에 NULL 을 가질 수 없다
+				referential integrity constraint
+					FK 와 PK 와 도메인이 같아야 하고 PK 에 없는 values 를 FK 가 값으로 가질 수 없다
 
 SQL의 개념과 SQL로 데이터베이스를 정의하는 법을 배웁니다.
 SQL 기본 개념
@@ -205,92 +209,292 @@ SQL & RDBMS
 SQL 은 RDBMS 의 표준 언어이지만 실제 구현에 강제가 없기 때문에 RDBMS 마다 제공하는 SQL 의 스펙이 조금씩 다르다
 MySQL로 정의할 예제 DB 소개
 
-database 만들기
-    DATABASE vs SCHEMA
-        MySQL 에서는 DATABASE 와 SCHEMA 가 같은 뜻을 의미
-        CREATE DATABASE company = CREATE SCHEMA company
-        다른 RDBMS 에서는 의미가 다르게 쓰임
-        i.g. PostgreSQL 에서는 SCHEMA 가 DATABASE 의 namespace 를 의미
-table 만들기 시작
+	database 만들기
+		DATABASE vs SCHEMA
+			MySQL 에서는 DATABASE 와 SCHEMA 가 같은 뜻을 의미
+			CREATE DATABASE company = CREATE SCHEMA company
+			다른 RDBMS 에서는 의미가 다르게 쓰임
+			i.g. PostgreSQL 에서는 SCHEMA 가 DATABASE 의 namespace 를 의미
+	table 만들기 시작
 
-attribute data type 소개
-    attribute data type : 숫자
-        정수					정수를 저장할 때 사용 						TINYINT, SMALLINT, MEDIUMINT, INT or INTEGER, BIGINT
-        부동 소수점 방식 		실수(real number)를 저장할 때 사용 			FLOAT, DOUBLE or DOUBLE PRECISION
-         (floating-point)	고정 소수점 방식에 비해 정확하지 않다
-        고정 소수점 방식 		실수를 정확하게 저장할 때 사용 					DECIMAL or NUMERIC
-         (fixed-point)		DECIMAL(5,2) => [-999.99~999.99]
-    attribute data type : 문자열
-        고정 크기 문자열		최대 몇 개의 '문자'를 가지는 문자열을 저장할지를 지정 					CHAR(n)
-                            저장될 문자열의 길이가 최대 길이보다 작으면 나머지를 space로 채워서 저장 	(0 <= n <= 255)
-                            name char(4)일 때 다음과 같이 저장 : 'a   ', '한국  ', '고고고고'
-        가변 크기 문자열 		최대 몇 개의 '문자'를 가지는 문자열을 저장할지를 지정 					VARCHAR(n)
-                            저장될 문자열의 길이 만큼만 저장 									(0 <= n <= 65,535)
-                            name varchar(4)일 때 다음과 같이 저장 : 'a', '한국', '고고고고'
-        사이즈가 큰 문자열 		사이즈가 큰 문자열을 저장할 때 사용 									TINYTEXT, TEXT, MEDIUMTEXT, LONGTEXT
-PRIMARY KEY 적용하기
-    primary key : table 의 tuple 을 식별하기 위해 사용, 하나 이상의 attribute(s)로 구성
-    primary key 는 중복된 값을 가질 수 없으며, NULL 도 값으로 가질 수 없다
-    attribute 하나일 경우
-        create table PLAYER ( id INT PRIMARY KEY)
-    attribute 둘 이상
-        create table PLAYER ( team_id VARCHAR(12), back_number INT ... PRIMARY KEY (team_id, back_number))
-UNIQUE constraint 적용하기
-    Key constraints : UNIQUE
-        UNIQUE 로 지정된 attribute(s)는 중복된 값을 가질 수 없다
-        단 NULL 은 중복을 허용할 수도 있다 (RDBMS 마다 다름)
-NOT NULL constraint 적용하기
-    attribute 가 NOT NULL 로 지정되면 해당 attribute 는 NULL 을 값으로 가질 수 없다
-    보통 UNIQUE 와 같이 사용, UNIQUE 가 NULL 을 허용하는 RDBMS 도 있기에
-DEFAULT 적용하기
-    attribute DEFAULT
-        attribute 의 default 값을 정의할 때 사용
-        새로운 tuple 을 저장할 때 해당 attribute 에 대한 값이 없다면 default 값으로 저장
-        i.g. salary DEFAULT 50000000 이라면 따로 지정하지 않을 때 디폴트 값이 저장
-CHECK constraint 적용하기
-    CHECK constraint
-        attribute 의 값을 제한하고 싶을 때 사용
-        i.g. salary CHECK (salary >= 50000000) 라면 10000000으로 입력이 불가능
-    attribute 하나일 경우
-        create table PLAYER ( age INT CHECK (age >= 20))
-    attribute 둘 이상
-        create table PLAYER ( start_date DATE, end_date DATE ... CHECK (start_date < end_date))
-    CHEC (sex in ('M', 'F'))
-FOREIGN KEY 적용하기
-    Referential integrity constraint : FOREIGN KEY
-        attribute(s) 가 다른 table 의 primary key 나 unique key 를 참조할 때 사용
-    선언 방법
-    reference_option		설명
-    CASCADE					참조값의 삭제/변경을 그대로 반영
-    SET NULL 				참조값이 삭제/변경 시 NULL 로 변경
-    RESTRICT 				참조값이 삭제/변경되는 것을 금지
-    NO ACTION 				RESTRICT 와 유사
-    SET DEFAULT 			참조값이 삭제/변경 시 default 값으로 변경
+	attribute data type 소개
+		attribute data type : 숫자
+			정수					정수를 저장할 때 사용 						TINYINT, SMALLINT, MEDIUMINT, INT or INTEGER, BIGINT
+			부동 소수점 방식 		실수(real number)를 저장할 때 사용 			FLOAT, DOUBLE or DOUBLE PRECISION
+			 (floating-point)	고정 소수점 방식에 비해 정확하지 않다
+			고정 소수점 방식 		실수를 정확하게 저장할 때 사용 					DECIMAL or NUMERIC
+			 (fixed-point)		DECIMAL(5,2) => [-999.99~999.99]
+		attribute data type : 문자열
+			고정 크기 문자열		최대 몇 개의 '문자'를 가지는 문자열을 저장할지를 지정 					CHAR(n)
+								저장될 문자열의 길이가 최대 길이보다 작으면 나머지를 space로 채워서 저장 	(0 <= n <= 255)
+								name char(4)일 때 다음과 같이 저장 : 'a   ', '한국  ', '고고고고'
+			가변 크기 문자열 		최대 몇 개의 '문자'를 가지는 문자열을 저장할지를 지정 					VARCHAR(n)
+								저장될 문자열의 길이 만큼만 저장 									(0 <= n <= 65,535)
+								name varchar(4)일 때 다음과 같이 저장 : 'a', '한국', '고고고고'
+			사이즈가 큰 문자열 		사이즈가 큰 문자열을 저장할 때 사용 									TINYTEXT, TEXT, MEDIUMTEXT, LONGTEXT
+	PRIMARY KEY 적용하기
+		primary key : table 의 tuple 을 식별하기 위해 사용, 하나 이상의 attribute(s)로 구성
+		primary key 는 중복된 값을 가질 수 없으며, NULL 도 값으로 가질 수 없다
+		attribute 하나일 경우
+			create table PLAYER ( id INT PRIMARY KEY)
+		attribute 둘 이상
+			create table PLAYER ( team_id VARCHAR(12), back_number INT ... PRIMARY KEY (team_id, back_number))
+	UNIQUE constraint 적용하기
+		Key constraints : UNIQUE
+			UNIQUE 로 지정된 attribute(s)는 중복된 값을 가질 수 없다
+			단 NULL 은 중복을 허용할 수도 있다 (RDBMS 마다 다름)
+	NOT NULL constraint 적용하기
+		attribute 가 NOT NULL 로 지정되면 해당 attribute 는 NULL 을 값으로 가질 수 없다
+		보통 UNIQUE 와 같이 사용, UNIQUE 가 NULL 을 허용하는 RDBMS 도 있기에
+	DEFAULT 적용하기
+		attribute DEFAULT
+			attribute 의 default 값을 정의할 때 사용
+			새로운 tuple 을 저장할 때 해당 attribute 에 대한 값이 없다면 default 값으로 저장
+			i.g. salary DEFAULT 50000000 이라면 따로 지정하지 않을 때 디폴트 값이 저장
+	CHECK constraint 적용하기
+		CHECK constraint
+			attribute 의 값을 제한하고 싶을 때 사용
+			i.g. salary CHECK (salary >= 50000000) 라면 10000000으로 입력이 불가능
+		attribute 하나일 경우
+			create table PLAYER ( age INT CHECK (age >= 20))
+		attribute 둘 이상
+			create table PLAYER ( start_date DATE, end_date DATE ... CHECK (start_date < end_date))
+		CHEC (sex in ('M', 'F'))
+	FOREIGN KEY 적용하기
+		Referential integrity constraint : FOREIGN KEY
+			attribute(s) 가 다른 table 의 primary key 나 unique key 를 참조할 때 사용
+		선언 방법
+		reference_option		설명
+		CASCADE					참조값의 삭제/변경을 그대로 반영
+		SET NULL 				참조값이 삭제/변경 시 NULL 로 변경
+		RESTRICT 				참조값이 삭제/변경되는 것을 금지
+		NO ACTION 				RESTRICT 와 유사
+		SET DEFAULT 			참조값이 삭제/변경 시 default 값으로 변경
 
-    create table PLAYER (
-        dept_id INT,
-        FOREIGN KEY (dept_id)
-            references DEPARTMENT(id)
-            on delete reference_option
-            on update reference_option
-    )
-constraint에 이름 붙이기
-    이름을 붙이면 어떤 constraint 을 위반헀는지 쉽게 파악할 수 있다
-    constraint 를 삭제하고 싶을 때 해당 이름으로 삭제 가능
-ALTER TABLE로 schema 변경하기
-    atrribute 추가 				ALTER TABLE employee ADD blood VARCHAR(2);
-    attribute 이름 변경 			ALTER TABLE employee RENAME COLUMN phone TO phone_num;
-    attribute 타입 변경 			ALTER TABLE employee MODIFY COLUMN blood CHAR(2);
-    table 이름 변경 				ALTER TABLE logs RENAME TO backend_logs;
-    primary key 추가 				ALTER TABLE log ADD PRIMARY KEY (id);
-    ...
+		create table PLAYER (
+			dept_id INT,
+			FOREIGN KEY (dept_id)
+				references DEPARTMENT(id)
+				on delete reference_option
+				on update reference_option
+		)
+	constraint에 이름 붙이기
+		이름을 붙이면 어떤 constraint 을 위반헀는지 쉽게 파악할 수 있다
+		constraint 를 삭제하고 싶을 때 해당 이름으로 삭제 가능
+	ALTER TABLE로 schema 변경하기
+		atrribute 추가 				ALTER TABLE employee ADD blood VARCHAR(2);
+		attribute 이름 변경 			ALTER TABLE employee RENAME COLUMN phone TO phone_num;
+		attribute 타입 변경 			ALTER TABLE employee MODIFY COLUMN blood CHAR(2);
+		table 이름 변경 				ALTER TABLE logs RENAME TO backend_logs;
+		primary key 추가 				ALTER TABLE log ADD PRIMARY KEY (id);
+		...
 
-    이미 서비스 중인 table 의 schema 를 변경하는 것이라면 변경 작업 때문에 서비스의 백엔드에 영향이 없을지 검토 후 변경하는 것이 중요
-table 삭제하기
-    DROP TABLE
-        table 을 삭제할 때 사용
-        DROP TABLE table_name;
-DB 구조 정의할 때 중요한 점
-    만들려는 서비스의 스펙과 데이터 일관성, 편의성, 확장성 등등을 종합적으로 고려하여 DB 스키마를 적절하게 정의하는 것이 중요하다
-    시니어와 주니어의 기준을 가르는 척도가 DATABASE 설계이기도 하다
+		이미 서비스 중인 table 의 schema 를 변경하는 것이라면 변경 작업 때문에 서비스의 백엔드에 영향이 없을지 검토 후 변경하는 것이 중요
+	table 삭제하기
+		DROP TABLE
+			table 을 삭제할 때 사용
+			DROP TABLE table_name;
+	DB 구조 정의할 때 중요한 점
+		만들려는 서비스의 스펙과 데이터 일관성, 편의성, 확장성 등등을 종합적으로 고려하여 DB 스키마를 적절하게 정의하는 것이 중요하다
+		시니어와 주니어의 기준을 가르는 척도가 DATABASE 설계이기도 하다
+
+SELECT
+projection attributes, selection condition, join condition
+SELECT name, position FROM employee WHWER id = 9;
+id = 9 처럼 조건을 명시하는 것을 selection condition 이라고 한다.
+관심있는 attribute(name, position)만 가져오는 것을 projection attributes라고 한다.
+SELECT statement
+SELECT attribute(s)
+FROM table(s)
+[WHERE condition(s)]; - 관심있는 tuple 만 가져오기
+project 2002를 리딩(leading)하고 있는 임직원의 ID와 이름과 직군을 알고 싶다.
+project table 과 employee table 을 연결해야한다.
+project table 의 leader_id attribute 를 references 하는 employee id 를 통해 접근
+SELECT employee.id, employee.name, positioni
+FROM project, employee
+WHERE project.id = 2002 and project.leader_id = employee.id;
+project.leader_id = employee.id 는 두 개의 테이블을 연결시키는 조건이다, 두 개의 테이블을 조인시키는 조건이다라는 뜻에 join condition 이라고 한다.
+AS : 별칭
+DISTINCT : 중복되는 tuple 을 제거
+LIKE
+LIKE 'J___' (J로 시작하는 4글자, 언더 스코어를 사용)
+LIKE '\%%' (% 문자로 시작하는 문자 찾기)
+LIKE '%\_' (언더 스코어로 끝나는 문자 찾기)
+
+		LIKE				문자열 pattern matching 에 사용
+		reserved character	%	0개 이상의 임의의 개수를 가지는 문자들을 의미
+							_ 	하나의 문자를 의미
+		escape character	\	예약 문자를 escape 시켜서 문자 본연의 문자로 사용하고 싶을 때 사용
+	* (asterisk) : 선택된 tuple 의 모든 attributes 를 보여주고 싶을 때 사용
+subquery
+subquery (nested query 또는 inner query 라고 불린다) : SELECT, INSERT, UPDATE, DELETE 에 포함된 query
+outer query (main query) : subquery 를 포함하는 query
+subquery 는 () 안에 기술된다
+
+	SELECT with subquery
+		ID 가 14 인 임직원보다 생일이 빠른 임직원의 ID, 이름, 생일을 알고 싶다.
+		SELECT id, name, birth_date FROM employee						outer query 에 해당
+		WHERE birth_date < (
+			SELECT birth_date FROM employee WHERE id = 14				subquery 에 해당
+			);
+
+		ID 가 1 인 임직원과 같은 부서 같은 성별인 임직원들의 ID 와 이름과 직군을 알고 싶다.
+		SELECT id, name, position
+		FROM employee
+		WHERE (dept_id, sex) = (
+			SELECT dept_id, sex
+			FROM employee
+			WHERE id = 1
+		);
+
+		ID 가 5 인 임직원과 같은 프로젝트에 참여한 임직원들의 ID 를 알고 싶다.
+			SELECT DISTINCT empl_id FROM works_on
+			WHERE empl_id != 5 AND (proj_id = 2001 OR proj_id = 2002);
+				다른 방법으로 	   AND proj_id IN (2001, 2002);
+			SELECT DISTINCT empl_id FROM works_on
+			WHERE empl_id != 5 AND proj_id IN (
+				SELECT proj_id FROM works_on WHERE empl_id = 5
+			);
+
+		unqualified attribute 가 참조하는 table 은
+		해당 attribute 가 사용된 query 를 포함하여 그 query 의 바깥쪽으로 존재하는 모든 queries 중에
+		해당 attribute 이름을 가지는 가장 가까이에 있는 table 을 참조한다.
+
+		ID 가 5 인 임직원과 같은 프로젝트에 참여한 임직원들의 ID 를 알고 싶다.
+		여기서 ID 와 이름을 알고싶다 (Employee table)
+			SELECT id, name
+			FROM employee
+			WHERE id IN (
+					SELECT DISTINCT empl_id
+					FROM works_on
+					WHERE empl_id != 5 AND proj_id IN (
+						SELECT proj_id
+						FROM works_on
+						WHERE empl_id = 5
+					)
+				);
+
+			SELECT id, name
+			FROM employee
+				(
+					SELECT DISTINCT empl_id
+					FROM works_on
+					WHERE empl_id != 5 AND proj_id IN (
+						SELECT proj_id
+						FROM works_on
+						WHERE empl_id = 5
+					)
+				) AS DSTNCT_E
+			WGERE id = DSTNCT_E.empl_id;
+
+			WHERE, FROM 절에서 subquery 사용이 가능하다.
+
+	EXISTS
+		ID 가 7 혹은 12 인 임직원이 참여한 프로젝트의 ID 와 이름을 알고 싶다.
+			SELECT P.id, P.name
+			FROM poject P
+			WHERE EXISTS (
+					SELECT *
+					FROM works_on W
+					WHERE W.proj_id = P.id AND W.empl_id IN (7,12)
+				);
+
+			correlated query : subquery 가 바깥쪽 query 의 attribute 를 참조할 때, correlated subquery 라 부른다.
+			EXISTS : subquery 의 결과가 최소 하나의 row 라도 있다면 TRUE 를 반환한다.
+			NOT EXISTS : subquery 의 결과가 단 하나의 row 도 없다면 TRUE 를 반환한다.
+
+			SELECT P.id, P.name
+			FROM poject P
+			WHERE id IN (
+					SELECT W.proj_id
+					FROM works_on W
+					WHERE  W.empl_id IN (7,12)
+				);
+
+			이렇게 IN 과 EXISTS 를 사용할 수 있다.
+
+	ANY
+		리더보다 높은 연봉을 받는 부서원을 가진 
+		리더의 ID 와 이름과 연봉을 알고 싶다.
+		SELECT E.id, E.name, E.salary
+		FROM department D, employee E
+		WHERE D.leader_id = E.id AND E.salary < ANY (
+				SELECT salary
+				FROM employee
+				WHERE id <> D.leader_id AND dept_id = E.dept_id
+			);
+
+				참고
+					<> 는 != 와 같다
+
+		v comparison_operator ANY (subquery) : subqyery 가 반환한 결과들 중에 단 하나라도 v 와의 비교 연산이 TRUE 라면 TRUE 를 반환한다.
+		SOME 도 ANY 와 같은 역할을 한다.
+
+
+		해당 부서의 최고 연봉도 표시
+
+			SELECT E.id, E.name, E.salary
+				(
+					SELECT max(salary)
+					FROM employee
+					WHERE dept_id = E.dept_id
+				) AS dept_max_salary
+			FROM department D, employee E
+			WHERE D.leader_id = E.id AND E.salary < ANY (
+					SELECT salary
+					FROM employee
+					WHERE id <> D.leader_id AND dept_id = E.dept_id
+				);
+
+			아래만 추가
+			(
+				SELECT max(salary)
+				FROM employee
+				WHERE dept_id = E.dept_id
+			) AS dept_max_salary
+
+	ALL
+		ID 가 13 인 임직원과 한번도 같은 프로젝트에 참여하지 못한 임직원들의 ID, 이름, 직군을 알고 싶다
+		SELECT DISTINCT E.id, E.name, E.position
+		FROM employee E, works_on W
+		WHERE E.id = W.empl_id AND W.proj_id <> ALL (
+				SELECT proj_id
+				FROM works_on
+				WHERE empl_id = 13
+			);
+
+		v comparison_operator ALL (subquery) : subquery 가 반환한 결과들과 v 와의 비교 연산이 모두 TRUE 라면 TRUE 를 반환한다.
+
+
+	참고
+		1. 성능 비교 : IN vs EXISTS
+			최근 버전은 성능차이가 거의 없다.
+			RDBMS 의 종류와 버전에 따라 차이가 있다.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -413,8 +413,33 @@ Ping과 RTT
         클라이언트에서 TIME_WAIT 에서 CLOSE 로 넘어가는 것은, 일정 시간이 지나면 그렇게 되고 소켓이 회수가 된다.
             소켓 이라는 것은 자원이다. 그래서 무한 자원이 아니고 쓸 수 있는 개수제한이 있다.
             그래서 서버가 연결을 끊으면 소켓이 낭비가 될 수 있기에 클라이언트에 알려주고 클라이언트가 끊도록 유도한다.(소켓, 서버 개발도 이렇게 해야한다.)
-         			TCP (연결) 상태 변화
-            다시한번 보자
+    TCP (연결) 상태 변화
+        서버 측면
+   			다이어그램
+   			CLOSED (소켓이 닫혀있음)
+   			LISTEN( LISTEN 한다는 얘기는 서버라는 얘기다 )
+   			접속대기
+   				클라이언트 SYN/SYN+ACK 보냄
+   			SYN RECEIVED (기다린다, 3 way handshake 과정)
+   			ESTABLISHED (연결, 데이터 교환이 실제 일어난다)
+   				그리고 닫을 때는 클라이언트가 닫는다
+   				FIN/ACK 클라이언트가 보냄
+   			Passive CLOSE (내가 닫는것이 아닌 클라이언트가 닫기에 passive 하다고 한다.)
+   				CLOSE WAIT
+   				LAST ACK
+   			CLOSED (소켓닫음)
+        클라이언트 측면
+   			CLOSED (소켓이 닫혀있음)
+   				연결하자고 CONNECT/SYN 보냄
+   			SYN SENT (상태로 변경)
+   				서버에서 SYN+ACK / ACK 보냄
+   			ESTABLISHED (연결)
+   				연결 끊자고 CLOSE/FIN 보냄
+   			Active CLOSE (클라이언트 측면이기에 Active CLOSE)
+   				FIN WAIT 1 (상태로 변경)
+   				…
+   				TIME WAIT
+   			CLOSED (연결종료)
     TCP, UDP 헤더형식과 게임서버 특징
         TCP
             TCP segment header 는 32bit 이다.
