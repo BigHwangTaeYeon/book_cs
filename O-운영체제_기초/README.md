@@ -568,3 +568,485 @@
    	2. 스레드2 도 락1을 먼저 취득하고 락2를 나중에 취득하게 변경
    	3. 락 2 안에 락 1 취득으로 중첩되게 사용하는데, 꼭 필요한 것일까 고민
 ```
+
+```text
+8. OS 프로세스의 상태(state) 변화를 이해하게 되고 자바 스레드의 상태와는 어떻게 다른지 알게 됩니다.
+   OS 에서 프로세스 상태(state)
+   1. new (프로세스 생성, 기다림)
+   2. ready 상태로 변경되서 CPU 에 실행할 준비(처음 프로세스 생성되면 바로 ready 상태로 변경)
+   3. scheduler 에 의해서 자신의 차례가 되면 running 상태가 되고 CPU 에서 이런저런 실행
+   4. 자신에게 할당된 time slice를 다 쓰게되면 다시 ready 상태
+   5. I/O 또는 critical section 을 기다릴 때, waiting 상태
+   6. 실행할 상태가 된다면 ready 상태로 기다리다가 running 상태로 변경되고 CPU 에서 실행
+   6. 프로세스가 종료되면 terminated 상태
+   쓰레드의 상태 변화는 메모리를 공유하는 프로세스이기에 위의 상태와 거의 동일하다.
+   위 설명은 운영체제마다 살짝 다를 수 있다
+
+   Java thread의 상태 종류
+   NEW
+   자바 스레드가 아직 시작하지 않은 상태
+   RUNNABLE
+   실행 중인 상태(CPU 실행)
+   다른 리소스를 기다리는 상태도 포함
+   IO 결과를 기다리는 상태도 포함
+   BLOCKED
+   모니터 락을 얻기 위해 기다리는 상태
+   critical section 으로 들어가기 위해 모니터 락을 얻기 위해 기다리는 상태
+   WAITING
+   다른 스레드를 기다리는 상태(언제 스레드가 waiting 상태가 되는지는 자바 공식 문서에서 코드레벨로 자세히 설명)
+   Object.wait <- 모니터 관련, wait() 호출하면 wait 상태로 변경
+   Tread.join <- join() 호출, wait 상태로 변경
+   ...
+   TIMED_WAITING
+   제한 시간을 두고 다른 스레드를 기다리는 상태
+   Object.wait with timeout <- timeout 을 파라미터로 wait() 메소드에 전달
+   Tread.join with timeout <- timeout 을 파라미터로 join() 메소드에 전달
+   Tread.sleep <- sleep() 호출
+   ...
+   TERMINATED
+   실행을 마치고 종료된 상태
+
+   	예.	(모니터와 관련된 자료에서 사용된 코드	)
+   	class BoundedBuffer {
+   		private final int[] buffer = new int[5];
+   		private int count = 0;
+
+   		public synchronized void produce(int item){	// synchronized 모니터 관련, 모니터 안에 뮤텍스 
+   			while(count == 5) { wait(); }
+   			buffer[count++] = item;
+   			notifyAll();
+   		}
+
+   		public void consume() {
+   			int item = 0;
+   			synchronized (this) {
+   				while (count == 0) { wait(); }
+   				item = buffer[--count];
+   				notifyAll();
+   			}
+   			System.out.println("Consume : " + item);
+   		}
+   	}
+
+   	public class Main {
+   		public static void main(String[] args) throws {
+   			BoundedBuffer buffer = new BoundedBuffer();
+
+   			Tread consumer = new Tread(() -> {
+   				buffer.consume();
+   			})
+   			Tread producer = new Tread(() -> {
+   				buffer.producer(100);
+   			})
+
+   			consumer.start();
+   			producer.start();
+
+   			consumer.join();
+   			producer.join();
+   			System.out.println("완료");
+   		}
+   	}
+
+   	상태 변화
+   	1. 
+   		public synchronized void produce(int item){	// synchronized 모니터 관련, 모니터 안에 뮤텍스 
+   			while(count == 5) { wait(); }
+   			buffer[count++] = item;
+   			notifyAll();
+   		}
+   		만들어지며 new 상태가 되며
+
+   	2. consumer.start(); 통해 runnable 상태
+
+   	3. 
+   		public void consume() {
+   			int item = 0;
+   			synchronized (this) {
+   				while (count == 0) { wait(); }
+   		wait(); 메소드를 통해 waiting 상태
+
+   	4. producer.start(); 통해 runnable 상태
+
+   	5. 
+   		public synchronized void produce(int item){	// synchronized 모니터 관련, 모니터 안에 뮤텍스 
+   			while(count == 5) { wait(); }
+   			buffer[count++] = item;
+   			notifyAll();
+   		}
+   		실행	
+
+   	6. 5의 notifyAll() 를 통해 waiting 상태였던 consumer 는 깨어나고 모니터 락을 아직 쥔 상태가 아님
+   		그래서 runnung 이 아닌 blocked 상태
+
+   	7. producer 는 실행을 마치고 synchronized void produce() 메서드를 탈출, 모니터 락을 반환
+
+   	8. consumer 는 락을 얻고 runnable 상태로 변경, public void consume() 메서드 탈출
+
+   	9. consumer 상태는 terminated 상태로 변경
+
+   Java Tread dump
+   Thread dump
+   실행 중인 자바 프로세스의 현재 상태를 담은 스냅샷
+   해당 프로세스에 속한 여러 스레드들의 상태를 알 수 있다.
+   Java 로 개발된 API 서버를 운영중에 있는데, 자바 API 의 서버의 스레드를 거의 사용해버리고 새로운 API 의 요청에 대해 응답을 제대로 못하는 상황.
+   종종 서버의 터미널로 접근해서 해당 자바 인스턴스의 스레드 덤프를 뜨고 그 스레드 덤프를 분석.
+   어디를 보고 상태 분석.
+   데드락이면 대부분 블락이나 웨이팅 상태.
+
+9. CPU scheduler와 dispatcher 차이의 이해와 스케줄링의 선점 방식과 다양한 스케줄링 알고리즘
+   CPU scheduler vs Dispatcher
+   scheduler : CPU에서 실행될 프로세스를 선택하는 역할
+   CPU가 항상 놀지 않고 일을 할 수 있도록 프로세스를 "선택"하는 역할
+   ready 상태에 있는 프로세스들을 모아 놓은 큐가 ready queue라고 하는데,
+   CPU 에서 실행되길 원하는 프로세스들이 기다리고 있다.
+   scheduler는 ready queue에서 다음 번에 어떤 프로세스가 CPU에서 실행되야 할 지를 선택하는 역할을 한다.
+   dispatcher : 선택된 프로세스에게 CPU를 할당하는 역
+   scheduler가 선택한 프로세스가 실제로 CPU에서 실행될 수 있도록 만드는 역할
+   context switching 역할을 한다. context switching은 괼장히 민감한 동작이므로 커널모드에서 실행된다.
+   끝이나고 새로운 선택된 프로세스가 실행될 수 있도록 유저모드로 전환이 된다. 컨트롤을 새롭게 선택된 프로세스에게 넘겨준다.
+   새롭게 선택된 프로세스가 어디서부터 작업을 시작해야할지. 실행되야할 적절한 위치로 이동시킨다.
+   스케줄링의 선점 방식
+   Nonpreemptive scheduling vs Preemptive scheduling
+   Nonpreemptive(비선점) scheduling : 신사적, 협력적(cooperative, 코루틴에서도 이 개념이 나오기에 중요하다), 느린 응답성(신사적으로 기다려주기 때문에, 오래 사용하고 있으면 계속 ready queue에서 기다리고 있을 것이다.)
+   종료(exit, terminated 상태) 또는 I/O(waiting 상태), 자발적으로 양보(ready 상태)로 이 세가지에 대해 OS에서 개입을 해서 스케쥴링을 하는 것
+   비선점이란 프로세스가 자발적으로 running 상태에서 빠져나가기 때문.
+   Preemptive(선점) scheduling : 적극적, 강제적, 빠른 응답성, 데이터 일관성 문제(이러한 문제들로 인해 크리티컬 섹션, 뮤텍스 락을 만들고 등등 작업을 한다.)
+   Nonpreemptive scheduling이 하는 일은 기본적으로 다 한다,
+   그리고 추가적으로 프로세스가 CPU에서 실행이 다 끝나지 않았음에도 개입하는 경우가 있다.
+   예를 들어
+   1. 어떤 프로세스가 CPU에서 실행중(running 상태)인데,
+   (멀티 태스킹)time slice를 다 쓰게 되면, 아직 CPU에서 작업이 끝나지 않아도 ready 상태(ready queue)로 돌아가야 한다.
+   이런 경우에 운영체제가 개입해서 ready queue에 집어 넣는 작업
+   2. waiting 상태의 프로세스가 만약 IO 작업이 끝나서 ready 상태가 되었을 때
+   ready 상태가 된 프로세스가 CPU에서 실행되고 있는 프로세스보다 우선순위가 더 높다면,
+   우선순위가 높은 프로세스를 바로 CPU 에서 실행 시켜야 하기에 이미 CPU에서 실행되고 있던 프로세스가 ready 상태로 가게 끔 스케쥴러가 개입
+   결론 : running 상태에서 프로세스가 실행하고 있는데, 충분히 CPU를 다 쓰지 않았음에도 강제로 ready로 바꿔줌
+   스케줄링 알고리즘 : ready queue에서 기다리고 있는 프로세스들을 어떤 알고리즘, 기준으로 선택할 것인지에 대한 내용
+   FCFS(first-come, first-served) : 먼저 도착한 순서대로 처리(큐방식)
+   SJF(shortest-job-first) : 프로세스의 다음 CPU burst가 가장 짧은 프로세스부터 실행
+   SRTF(shortest-remaining-time-first) : 남은 CPU burst가 가장 짧은 프로세스부터 실행
+   Priority : 우선순위가 높은 프로세스부터 실행
+   Nonpreemptive, Preemptive 방식에 따라 다르다.
+   RR(round-robin) : time slice로 나눠진 CPU time을 번갈아가며 실행(멀티 태스킹 방식과 가장 유사한 방식)
+   Multilevel queue : 프로세스들을 그룹화해서 그룹마다 큐를 두는 방식
+
+10. 유저 모드, 커널 모드, 인터럽트, 시스템 콜의 의미와 프로그래밍 언어와의 관계 이해
+    User mode & Kernel mode
+    User mode : 우리가 개발하는 프로그램은 일반적으로 유저 모드에서 실행
+
+    	User mode -> kernel mode : 프로그램 실행 중에 인터럽트(interrupt)가 발생하거나 시스템 콜(system call)을 호출하게 되면 커널 모드로 전환
+
+    	Kernel mode : 프로그램의 현재 CPU 상태를 저장함
+    		커널이 인터럽트나 시스템 콜을 직접 처리. 즉, CPU에서 커널 코드가 실행됨
+    		처리가 완료되면 중단됐던 프로그램의 CPU 상태를 복원
+
+    	Kernel mode -> User mode : 다시 통제권을 프로그램에게 반환
+
+    	User mode : 프로그램이 이어서 실행됨
+
+    커널(Kernel)
+    - 운영체제의 핵심
+    - 시스템의 전반을 관리/감독하는 역할
+    - 하드웨어와 관련된 작업을 직접 수행
+    존재 이유 : 시스템을 보호하기 위해
+    개발한 프로그램이 함부러 하드웨어를 모두 점유해서 사용하여 다른 프로세스에 영향이 가던가 전체 시스템에 영향이 갈 수 있음
+
+    Interrupt : 시스템에서 발생한 다양한 종류의 이벤트 혹은 그런 이벤트를 알리는 메커니즘
+    종류
+    - 전원(power)에 문제가 생겼을 때
+    - I/O 작업이 완료됐을 때
+    - 시간이 다 됐을 때(timer H/W 관련)
+    - 0으로 나눴을 때(프로그램 레벨, 그래서 interrupt 대신 trap 이라고 불리기도 함)
+    - 잘못된 메모리 공간에 접근을 시도할 때(프로그램 레벨, 그래서 interrupt 대신 trap 이라고 불리기도 함)
+    ... 등등
+
+    인터럽트가 발생하면 CPU에서는 즉각적으로 인터럽트 처리를 위해 커널 코드를 커널 모드에서 실행
+    즉각적으로 란 인터럽트가 언제든 발생할 수 있기에 실행중인 명령어를 마무리하고 인터럽트 처리를 위해 커널이 통제권을 넘겨받아 관련 처리를 한다.
+
+    System call : 프로그램이 OS 커널이 제공하는 서비스를 이용하고 싶을 때 시스템 콜을 통해 실행
+    종류
+    - 프로세스/스레드 관련
+    - 파일 I/O 관련
+    - 소켓 관련(네트워크 관련)
+    - 장치(device) 관련
+    - 프로세스 통신 관련(프로세스 끼리 통신)
+
+    시스템 콜이 발생하면 해당 커널 코드(시스템 콜에 대응하는 각각의 커널 코드가 있다)가 커널 모드에서 실행
+
+    시스템 콜 & 인터럽트 : 어떻게 사용되는지, 유저모드에서 커널모드로 어떻게 전환되는지 (파일을 read 할 때의 예제 상황)
+    유저모드
+    - 스레드1이 running 상태에서 file을 read 하기 위해, read 라는 시스템 콜을 호출하는 순간 커널 모드로 전환. 스레드2 ready 상태
+    커널모드 전환
+    - 스레드1 cpu 상태 저장
+    - 파일 읽을 준비(IO 작업관련이고 SSD로부터 파일을 읽어 오려는 작업이기에 파일의 위치를 찾아서 파일에서 읽으려는 내용을 buffer에서 읽을 수 있도록 준비시키는 작업을 한다.(SSD 관련 작업))
+    - 스레드1 상태를 waiting 상태로 변경, 스레드2 running 상태로 변경
+    유저모드 전환
+    - 통제권은 스레드2로 넘어옴
+    - 스레드1이 요청했던 파일을 읽을 준비가 완료 됬다는 것을 interrupt를 통해 알려준다, 그러면 다시 커널모드로 전환
+    커널모드 전환
+    - 스레드2 cpu 상태 저장, 스레드1 ready 상태로 변경
+    - 스레드2 cpu 상태 복원하고 통제권을 유저모드에 넘겨(유저모드 전환)준다.
+    유저모드 전환
+    - 멀티 태스킹 방식이기 때문에 주어진 time slice를 다 사용하고 time 이라는 H/W를 통해 시간을 모두 사용한 것을 interrupt를 통해 알려준다
+    - timer와 관련된 interrupt가 발생하면 다시 커널모드로 전환된다.
+    커널모드 전환
+    - 스레드2 cpu 상태 저장, 스레드2 ready 상태로 변경, 스레드1 running 상태로 변경, 스레드1 cpu 상태 복원
+
+
+		다시 처음부터 똑같이 반복..
+
+	프로그래밍 언어와 시스템 콜
+		하드웨어 혹은 시스템 관련 기능은 어떤 프로그램이라도 반드시 시스템 콜을 통해서만 사용 가능
+		하지만 보통 우리는 개발할 때 직접 OS 시스템 콜을 사용한 적이 없죠.
+		그럼에도 우리는 지금까지 파일 I/O, 네트워크 I/O, 프로세스/스레드 관련 작업을 해왔습니다.
+		어떻게 가능했던걸까
+			이것은 우리가 사용하는 프로그래밍 언어들이 시스템 콜을 포장(wrapping)하여 간접적으로 사용할 수 있도록 제공했기 때문
+
+		java.lang.Thread class
+
+		Thread thread = new Thread();
+		thread.start();
+		// 시스템 콜을 반드시 필요로 하는 작업
+
+		public synchronized void start() {
+			...
+			boolean started = false;
+			try {
+				start0();
+				started = true;
+			} finally {...}
+			...
+		}
+		private native void start0();	// native 키워드는 JNI(Java Native Interface)를 통해서 기반이 되는 OS의 시스템 콜을 호출
+										// 리눅스 기반이라면 clone 이라는 시스템 콜을 호출하는 것으로 볼 수 있다.
+
+		하이레벨 프로그램 언어가 이 시스템 콜을 호출할 수 있도록 래핑해서 제공하고, 개발자는 간접적으로 시스템 콜을 사용할 수 있다.
+
+11. 하드웨어, OS, 네이티브, 커널, 유저, 그린 스레드 개념의 이해
+    Hardware thread
+    코어(core)의 고민 : 메모리에서 데이터를 기다리는 시간이 꽤 오래 걸린다(코어에서 실행되는 연산작업보다 메모리에서 기다리는 시간이 더 오래 걸린다. 코어낭비)
+    메모리를 기다리는 동안, 다른 스레드를 실행하는건 어떻까?
+    코어가 연산 작업을 하다가 메모리에서 읽어오든 결과를 반영하든 메모리에 접근하면 코어는 일을 하지않게 된다.
+    그래서 메모리에 접근하는 동안에 독립적으로 다른 작업을 하게 하는 방식
+    결론은 두 개의 서로 다른 H/W Thread 를 사용한다고 한다.
+    인텔에서는 hyper-threading 이라고 브랜딩을 했다 : 물리적인 코어마다 하드웨어 스레드가 두개
+    Hardware thread : OS 관점에서는 가상의(logical) 코어
+    만약에 싱글 코어 CPU에 하드웨어 스레드가 두 개라면 OS는 이 CPU를 듀얼 코어로 인식하고 듀얼 코어에 맞춰서 OS 레벨의 스레드들을 스케줄링 한다.
+    OS thread(일반적으로 알고 있던 스레드 개념)
+    커널(kernel) :
+    - 운영체제의 핵심
+    - 시스템의 전반을 관리/감독하는 역할
+    - 하드웨어와 관련된 작업을 직접 수행
+    OS 스레드
+    - OS 커널 레벨에서 생성되고 관리되는 스레드
+    - CPU에서 실제로 실행되는 단위
+    - CPU 스케줄링의 단위
+    - OS 스레드의 컨텍스트 스위칭은 "커널"이 개입 -> 비용 발생
+    - 사용자 코드와 커널 코드 모두 OS 스레드에서 실행된다
+    OS 스레드는 아래와 같이 불리기도 한다
+    - 네이티브(native) 스레드 (보통 네이티브라고 하면 OS 개념)
+    - 커널 스레드* (다른 의미로도 불린다)
+    - 커널-레벨 스레드
+    - OS-레벨 스레드
+
+    	OS 스레드 여덟 개가 하이퍼 스레딩이 적용된 인텔 듀얼코어 위에서 동작한다면
+    	OS 스레드들을 어떻게 코어에 균등하게 할당할 수 있을까요 ?
+    		물리적인 CPU 2개, 가상 스레드 4개, OS 스레드 두 개씩 가상 스레드에 할당
+    User thread
+    유저 스레드는 유저-레벨 스레드라고 불리기도 한다
+    유저 스레드 : 스레드 개념을 프로그래밍 레벨에서 추상화 한 것
+    Thread thread = new Thread();
+    thread.start();	// start0() JNI 에서 OS kernel 의 system call 호출, 리눅스면 clone 호출되고 os level thread 생성
+    유저 스레드가 CPU에서 실행되려면 OS 스레드와 반드시 연결돼야 한다
+    유저 스레드와 OS 스레드를 어떻게 연결시킬 것인가 ?
+    One-to-One model (오늘날의 java의 예)
+    유저 스레드와 OS 레벨의 스레드가 1:1로 연결되는 모델
+    스레드 관리를 OS에 위임 (스케줄링 포함, 커널이 수행)
+    멀티코어 활용 (CPU가 멀티 코어를 가진다 하더라도 멀티 코어의 OS 스레드를 잘 배분 시켜서 동작 시킬 것이다.(1:1 매핑되는 유저 코어도 멀티코어로 잘 활용된다))
+    한 스레드는 블락되어도 다른 스레드는 잘 동작 (유저 스레드가 block I/O 를 실행한다면 OS 레벨 스레드도 block I/O 실행, 해당 스레드는 blocking이 되어 기다리게 되지만 다른 스레드들은 상관 없이 잘 동작한다.)
+    race condition 가능성
+    Many-to-One model
+    여러 유저 스레드가 하나의 OS 스레드에 연결되는 모델
+    유저 스레드 간의 스위칭이 빠름 (컨텍스트 스위칭 작업을 커널이 개입하지 않기 때문에 컨텍스트 스위칭이 훨씬 더 빠르게 끝날 수 있다)
+    race condition 가능성이 적다
+    멀티 코어 활용을 못한다.
+    한 스레드가 블락 -> 모든 스레드들 블락 => 그래서 non block io 사용 (유저 스레드 하나가 block I/O 작업을 하면 커널 레벨의 스레드도 block I/O 를 실행하고 연결되어 있는 나머지 유저 스레드들 전부도 blocking이 된다.)
+    Many-to-Many model
+    다수의 유저 스레드와 다수의 OS 스레드들의 연결
+    One-to-One, Many-to-One model의 장점을 합친 것 이다.
+    유저 스레드들간의 스위칭이 빠르면서도 멀티 코어를 활용하게 되고, 하나가 블락이 되도 전체 유저 스레드가 블락이 되지 않는다. (Go 언어에서 지원)
+    스레딩(threading) 모델
+    유저 스레드(user thread) : OS와는 독립적으로 유저 레벨에서 스케줄링되는 스레드
+    Green thread
+    Java 초창기 버전은 Many-to-One 스레딩 모델을 사용, 이 때 이 유저 스레드들을 그린 스레드라고 호칭(이전에 사용된 의미)
+    OS와는 독립적으로 유저 레벨에서 스케줄링되는 스레드(오늘날은 확장되어 Many to One, Many to Many model 의 유저 스레드를 호칭)
+    맥락에 따라 유저 스레드와 그린 스레드를 같은 의미로 사용하기도 한다.
+    조금 다른 맥락에서 Kernel thread
+    Kernel thread : OS 커널의 역할을 수행하는 스레드
+    유저 레벨에서 스케줄링되는 스레드는 나중에 배울 코루틴(coroutine)과 관련이 있으니 잘 기억해 주자 !
+
+12. 스레드 풀(thread pool) 개념과 사용할 때 팁
+    Thread per request model
+    API에 요청이 들어오면 request와 스레드를 1:1 매핑해서 하나의 request를 하나의 스레드가 처리하는 방식
+    만약 thread per request 모델의 동작 방식이 서버에 들어오는 요청마다 스레드를 새로 만들어서 처리하고 처리가 끝난 스레드는 버리는 식으로 동작한다면 어떤 문제가 있을까?
+    스레드 생성에 소요되는 시간 때문에 요청 처리가 더 오래 걸림
+    처리 속도보다 더 빠르게 요청이 늘어나면
+    - 스레드가 계속 생성 (스레드 수 증가)
+    -> 메모리가 점점 고갈됨
+    - 컨텍스트 스위칭이 더 자주 발생
+    - CPU 오버헤드 증가로 CPU time 낭비
+    - 어느 순간 서버 전체가 응답 불가능 상태에 빠짐
+    위의 문제를 해결하기 위해 Tread pool 개념 등장
+    미리 스레드를 제한된 개수 만큼 생성해 놓고, request는 스레드 풀에서 내부적으로 관리하는 queue에 들어오게 된다.
+    큐에 들어온 요청은 놀고 있는 스레드에게 할당이 된다.
+    미리 스레드를 여러 개 만들어 놓고 재사용
+    -> 스레드 생성 시간 절약
+    제한된 개수의 스레드를 운용
+    -> 스레드가 무제한 생성되는 것을 방지
+    thread pool 사례 : 여러 작업을 동시에 처리해야할 때
+    - thread per request 모델
+    - task를 subtask로 나뉘어서 동시에 처리(예. 몇천억개 되는 아이템의 가격을 모두 더하고 싶을 때, subtask로 나눠서 동시에 처리 가능. subtask로 나눠진 아이템들을 동시에 각 가격을 합산하고 최종적으로 합치는 방식)
+    - 순서 상관없이 동시 실행이 가능한 task 처리
+    Tread pool 사용 팁
+    1. 스레드 풀에 몇 개의 스레드를 만들어 두는 게 적절한가 ?
+    CPU 코어 개수와 task의 성향에 따라 다름
+    - CPU-bound task 라면, 코어 개수 만큼 혹은 그 보다 몇 개 더 많은 정도
+    - I/O-bound task 라면, 코어 개수보다 1.5배? 두 배? 세 배? 경험적으로 찾아야 함
+    2. 스레드 풀에서 실행될 task 개수에 제한이 없다면 "스레드 풀의 큐가 사이즈 제한이 있는지 꼭 확인할 것 !"
+    큐에 요청이 무한정 쌓인다면 ?
+    남는 스레드가 없고 큐에 요청들이 계속 쌓이는 상황인데, 이 큐 사이즈에 제한이 없다면 요청이 계속 쌓인다.(잠재적으로 메모리를 고갈시킬 수 있는 위험 요소가 될 수 있)
+    제한이 있는지 확인하고, 반드시 제한을 둬야한다.(나머지 요청을 버리더라도 서버를 위해 해야할 작업)
+    CAUTION! 자바의 Executors 클래스
+    static 메서드로 다양한 형태의 스레드 풀을 제공
+    ExecutorService threadPool = Executors.newFixedTreadPool(10);
+    threadPool.submit(task1);
+    threadPool.submit(task2);
+
+    				public static ExecutorService newFixedTreadPool(int nThreads) {	// 매개변수, 스레드 개수
+    					return new TreadPoolExecutor(nThreads, nThreads
+    							, 0L, TimeUnit.MILLISECONDS
+    							, new LinkedBlockingQueue<Runnable>());
+    				}
+    				public LinkedBlockingQueue() {
+    					this(Integer.MAX_VALUE);	// 20억 쯤 됨.
+    				}
+    				public LinkedBlockingQueue(int capacity) {	// 매개변수, 큐 사이즈
+    					if(capacity <= 0) throw new IllegalArgumentException();
+    					this.capacity = capacity;
+    					last = head = new Node<E>(null);
+    				}
+
+    				// Integer.MAX_VALUE 20억 쯤되는데 이것을 사이즈로 정한다는 것은, 제한이 없다는 말이다.
+    Pool이라는 개념은 스레드에만 쓰이는 것은 아닙니다
+    connection pool - tcp connection을 만들 때도 시간이 소요되어 미리 만들어 두는 것
+    process pool - 프로세스를 여러개 미리 만들어 놓는
+
+13. block I/O와 non-block I/O의 개념과 이해
+    I/O : input/output, 데이터의 입출력
+    종류 : network(socket), file, pipe(process 간 통신에 사용되는 개념), device(모니터, 키보드)
+    socket : 네트워크 통신은 socket을 통해 데이터가 입출력 된다
+    backend server : 네트워크 상의 요청자들과 각각 소켓을 열고 통신한다
+
+    block I/O와 non-block I/O의 동작 원리를 OS 레벨에서의 개념으로 네트워크 I/O를 예로 설명
+    block I/O : I/O 작업을 요청한 프로세스/스레드는 요청이 완료될 때까지 블락됨
+    스레드에서 코드가 실행이 되다가 read blocking system call 을 호출하고 block이 된다
+    커널 모드로 전환이 되고, read i/o 실행(관련 device에서 실행)하고 시간이 지나 read response. data moved from kernel space to user space.
+    Socket에서 block I/O 란 ?
+    소켓 마다 두 개의 버퍼가 있다. send_buffer, recv_buffer
+    1. read : read system call을 socket에 대고 호출하면 recive buffer에 데이터가 들어올 때 까지 read system call을 호출한 스레드는 블락이 된다.(recive buffer에 데이터가 들어올 때 까지 블락)
+    2. write : send buffer가 가득 차있을 때, 블락이 된다.(send buffer의 공간이 생길 때 까지)
+
+    	non-block I/O : 프로세스/스레드를 블락시키지 않고 요청에 대한 현재 상태를 "즉시 리턴", 그렇기에 스레드가 다른 작업을 수행할 수 있
+    		스레드가 read non-blocking system call 호출하는 순간 kernel mode 로 context switching되고 커널에서 initiate read I/O 작업 실행
+    		그리고 커널에서 바로 리턴, 리눅스 기준 -1 값을 리턴하고 동시에 EAGAIN or EWOULDBLOCK의 에러코드 둘 중 하나를 같이 리턴
+    		non-block io 이기에 이어서 다른 코드도 실행할 수 있다. 그러는 동안에, I/O device로부터 읽을 준비가 되었다는 응답이 커널로 오게되고 커널은 데이터를 준비해 둔다.
+    		스레드는 또 read non-blocking system call 호출하게되고 kernel mode 로 context switching되고
+    		준비 되어 있던 데이터, data moved from kernel space to user space.
+    		Socket에서 non-block I/O 란 ?
+    			소켓 마다 두 개의 버퍼가 있다. send_buffer, recv_buffer
+    			1. read : recv_buffer에 데이터가 있는지 read로 확인, 데이터가 없다면 없다고 알려주고 read system call은 바로 종료
+    			2. write : send_buffer에 데이터가 가득차있다면, block 시키지 않고 적절한 에러코드와 함께 write system call을 반환시킨다.
+    		I/O 작업 완료를 어떻게 확인할 것인가 ?(non-block i/o 결과 처리 방식)
+    			1. 완료됐는지 반복적으로 확인
+    				문제 : 완료된 시간과 완료를 확인한 시간 사이의 갭으로 인해 "처리 속도가 느려질 수 있음"
+    				확인에 대한 read response를 반환과 데이터 반환에 대한 system call 요청 사이의 딜레이가 발생
+    				완료됐는지 반복적으로 확인은 "CPU 낭비가 발생"
+    			2. I/O multiplexing(다중 입출력) 사용
+    				관심있는 I/O 작업들을 동시에 "모니터링"하고 그 중에 완료된 I/O 작업들을 "한번에 알려줌"
+    				스레드는 I/O multiplexing system call을 커널에 요청. 이때 monitor 2 socket non-blocking read(2개의 소켓에 대해 논블락킹 모드로 읽으려니까 새로 들어오는 데이터가 있는지 알려주세용)
+    				initiate read I/O, initiate read I/O 작업(소켓 두 개) 요청을 network device에 보냄
+    				I/O multiplexing system call을 호출한 스레드는 block이 될 수도 있고 어떻게 호출하느냐에 따라 또 다른 코드를 실행할 수도 있다.
+    				(블라킹모드로 동작으로 설명)
+    				두 소켓에 데이터가 들어오고 network device로 부터 read response를 받게 되고, 커널에서 데이터가 있다는 것을 알려주게 된다
+    				스레드는 블라킹 모드에서 깨어나고 순차적으로 read non-blocking system call 요청 > data moved 두 번 실행
+    				종류
+    					- select(성능이 좋지 않아 잘 쓰이지 않음)
+    					- poll(성능이 좋지 않아 잘 쓰이지 않음)
+    					- epoll(리눅스)
+    						각 socket이 epoll을 통해서 하나라도 read이벤트가 생기면 알려주게 만듦
+    					- kqueue(mac)
+    					- IOCP(I/O completion port)(window, solaris)
+    				I/O multiplexing은 네트워크 통신에 많이 사용된다. 톰켓 등 이미 잘 되어있어서 직접 만들 필요는 없지만 개발하다보면 활용할 일이 생길 수 있으니 알고 있자
+    			3. Callback/signal 사용
+    				스레드가 aio_read non-blocking system call > kernel 에서는 initiate read I/O
+    				read response가 오면 callback or signal로 처리
+    				종류
+    					- POSIX AIO (여러 운영체제에서 표준화되어 사용할 수 있는 명세서 같은 것. 그 안에 정의된 AIO를 통해 사용)
+    					- LINUX AIO
+    					널리 사용되지는 않는 것 같음
+    			4. 그 외..
+    				io_uring (linux에서는 새롭게 추가됨, file io 에서 장점인듯)
+    핵심은 non-block I/O를 통해 I/O 요청 완료 전에도 다른 일을 할 수 있다는 것 !
+
+14. 관점에 따른 asynchronous의 다양한 개념
+    programming 관점
+        Synchronous(동기)
+            |	task1	|	task2	|	task3	|
+            synchronous programming : 여러 작업(task)들을 순차적으로 실행하도록 개발
+        Asynchronous(비동기)
+            |	task1	|
+              |	task2	  |
+             |	task3	 |
+    asynchronous programming : 여러 작업들을 독립적으로 실행하도록 개발
+    여러 작업을 동시에 실행하는 프로그래밍 방법론
+    multithreading : asynchronous programing의 한 종류
+    asynchronous programing을 가능하게 하는 것은
+    - multi-threads
+    thread1		|	task1	|	task2	|
+    thread2		|	task3	|	task4	|
+    - non-block I/O
+    thread		|	task1	|
+    |	task2	  |
+    |	task3	 |
+    백엔드 프로그래밍의 추세는 스레드를 적게 쓰면서도 non-block I/O를 통해 전체 처리량을 늘리는 방향으로 발전 중
+    I/O 관점
+    case1
+    synchronous I/O = block I/O
+    asynchronous I/O = non-block I/O
+    case2
+    synchronous I/O : 요청자가 I/O 완료까지 챙겨야 할 때
+    asynchronous I/O : 완료를 noti 주거나 callback으로 처리
+    case3
+    asynchronous I/O : block I/O를 다른 thread에서 실행
+    백엔드 아키텍처 관점
+    하나의 서비스는 기능과 역할에 따라 여러 개의 마이크로 서비스로 구성되고 이들 사이에는 빈번하게 커뮤니케이션이 발생합니다.
+    synchronous communication
+    A service 					B service  					C service
+    ->
+    API call : send event		
+    ->
+    API call : send event
+    만약 C에서 응답 불능상태에 빠지면 B, A Service에도 응답 불능 문제가 생겨서 서비스 전체가 장애가 확대될 수 있다.
+    이러한 문제로 인해 비동기로 동작시키는 것이 좋다.
+    asynchronous communication
+    A service 					B service  					C service
+    produce event
+    ->	Message Q 	->
+    comsume event
+    produce event
+    ->	Message Q 	->
+    comsume event
+    Message Q 라는 buffer를 두었기 때문에 해당 서비스에서 문제가 생겨도 해당 서비스에만 문제가 발생한다.
+    섞어서 쓸 수도 있다. MQ는 느릴수도 있다.
+```
