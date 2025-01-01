@@ -1033,5 +1033,4 @@ https://www.youtube.com/@ez.
 																		comsume event
 				Message Q 라는 buffer를 두었기 때문에 해당 서비스에서 문제가 생겨도 해당 서비스에만 문제가 발생한다.
 			섞어서 쓸 수도 있다. MQ는 느릴수도 있다.
-
 ```
