@@ -81,55 +81,83 @@ https://www.youtube.com/@ezcd
     그래서 여전히 LOST UPDATE 가 발생한다.
 
 18. DB MVCC 이어서 설명합니다 ! MySQL & postgreSQL 예제와 함께 확인해 보세요 ! (feat. select ... for update)
-    
-
-    00:00 1부 영상 소개
     00:22 mySQL에서 lost update 해결
+        tx1 repeatable read, x가 y에 40을 이체한다. tx2 repeatable read, x에 30을 입금한다. db x=80 y=50
+        
+        tx2 : read(x) => 50         
+            (MySQL 에서는 개발자가 SELECT balance FROM account WHERE id = 'x' FOR UPDATE 와 같이
+            FOR UPDATE 를 작성해주므로써 Locking read 가 되어 read(x) 를 하면서도 x 에 대한 write lock 을 취득할 수 있다.)
+        tx1 : read(x)
+            (여기서도 write 를 위한 read 이기에 Locking read 를 사용해야한다.
+            그리고 이미 x 에 대한 락은 tx2 가 먼저 가져갔기에 tx1 은 락을 기다리게 된다.)
+        tx2 : write(x=80)
+        tx2 : commit        (lock 반환과 동시에 tx1 의 read(x)는 락을 획득한다.)
+        tx1 : read(x) => 80
+            (repeatable read 의 level 이기에 트랜잭션이 시작하는 순간의 기준으로 데이터를 읽을 것이라 생각되지만
+            isolation level 과 상관없이 locking read 로 인해서 가장 최근의 commit 된 데이터를 읽게되어 50이 아닌 tx2 를 통해 반영된 80을 읽는다.)
+        tx1 : write(x=40)   (트랜잭션 자체적으로 x=40 의 값을 가진다.)
+        tx1 : read(y)       (이때도 마찬가지로 locking read 를 사용한다.)
+        tx1 : write(y=50)
+        tx1 : commit
+        
+        이렇게 MySQL 에서는 LOST UPDATE 를 방지하기 위해서 Locking read 를 사용해야한다.
+        isolation level 로만은 해결되지 않는다.
+        
+        Locking read 사용법
+        SELECT ... FOR UPDATE; exclusive lock
+        SELECT ... FOR SHARE;  shared lock
+            write-lock (exclusive lock)
+                read/write(insert, modify, delete)할 때 사용된다.
+                다른 tx가 같은 데이터를 read/write하는 것을 허용하지 않는다.
+            read-lock (shared lock)
+                read 할 때 사용한다.
+                다른 tx가 같은 데이터를 read하는 것은 허용한다.
+        다른 RDBMS 에서도 위와같은 문법을 지원하지만 동작방식이 조금 다르다.
+        
+        locking read 와 consistence lock 이라는 용어를 사용한다는 점 기억하자.
+        
     05:33 repeatable read에서 write skew 문제
+        tx1 repeatable read, x=x+1. tx2 repeatable read, y=x+y. db x=10 y=10
+        
+        tx1 : read(x) => 10
+        tx2 : read(x) => 10
+        tx1 : read(y) => 10
+        tx2 : read(y) => 10
+        tx1 : write(x=20)
+        tx2 : write(x=20)
+        tx1 : commit
+        tx2 : commit
+        
+        기대한 값은 x=20 y=30 이지만 결과는 x=20 y=20 이다.
+        이것을 WRITE SKEW 라고 한다.
+        이 현상은 MySQL, PostgreSQL 모두 나타날 수 있는 증상이다.
+    
     07:47 MySQL에서 write skew 해결
+        locking read 로 해결해야한다.
+        isolation level 을 한층 더 올려서 해결할 수 있다.(serializable)
+    
     10:11 postgreSQL에서 write skew 해결
+        locking read 를 사용하면, MySQL 과 다른 동작방식으로 해결된다.
+        
+        postgre 는 repeatable level 일 때, 같은 데이터에 먼저 update 한 tx 가 commit 되면 이후에 tx 은 rollback 되는 성질로 인해서
+        tx1 이 끝나고 locking read 를 얻는 tx2 가 for update 를 해도 read 는 실패를 하고 rollback 이 된다.
+    
+        rollback 이 되지 않고 해결을 원한다면 isolation level 을 한층 더 올려서 해결할 수 있다.(serializable)
+    
     13:32 serializable (두 RDBMS의 차이)
-    15:25 MVCC 참고 사항
-    15:56 클로징
+        가장 강력한 isolation level 이기 때문에 어떠한 이상 현상도 발생하지 않는다.
+        
+        MySQL
+            repeatable read 와 유사
+            tx 의 모든 평범한 select 문은 암묵적으로 select... for share 처럼 동작한다.
+                (MVCC 보다는 lock 으로 동작을 한다고 보통 얘기한다.
+                for update 가 아닌 for share 를 사용하는 이유는 성능 때문이다. for update 는 exclusive lock 이기 때문.
+                for share 는 for update 에 비해 데드락(dead lock)이 발생할 가능성이 높다.)
+            SELECT ... FROM ... => SELECT ... FROM ... FOR SHARE 로 자동으로 바꿔준다.
+            
+        PostgreSQL
+            특징 : SSI(serializable snapshot isolation)로 구현 - 여전히 MVCC 로 동작을 하면서 모든 이상현상을 막아주는 isolation 기법
+            동작방식 : first-committer-winner
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+트랜잭션 마무으리
 ```

@@ -1,5 +1,5 @@
 💡데이터 베이스 기초
-https://www.youtube.com/@ezcd
+https://www.youtube.com/@ez.
 
 ```text
 subquery로 하나의 query로 만드는 것보다 query 두 개를 쓰는 성능
