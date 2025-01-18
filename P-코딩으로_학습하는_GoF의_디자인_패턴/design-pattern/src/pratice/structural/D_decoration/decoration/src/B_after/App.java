@@ -1,8 +1,8 @@
 package B_after;
 
 public class App {
-    private static boolean enableSpan = true;
-    private static boolean enableTrim = true;
+    private static boolean enableSpan = false;
+    private static boolean enableTrim = false;
 
     public static void main(String[] args) {
         CommentService commentService = new DefaultCommentService();
