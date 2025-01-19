@@ -64,27 +64,4 @@ Spring
     @Chacheable
     @Transactional
     ... 등등등
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
 ```
